@@ -14,7 +14,8 @@ class StudentDataset(Dataset):
     def __getitem__(self, idx):
         return self.features[idx]
 
-def get_dataloaders(filepath, batch_size=32):
+# --- THIS WAS MISSING ---
+def load_and_process_data(filepath):
     # Load Data
     df = pd.read_csv(filepath)
     
@@ -22,12 +23,13 @@ def get_dataloaders(filepath, batch_size=32):
     if 'student_id' in df.columns:
         df = df.drop(columns=['student_id'])
     
-    # We only need features (X) for Autoencoder, not the target (Exam Score)
-    # But we drop the target col to avoid data leakage if it exists
+    # Separate Target
     if 'exam_score' in df.columns:
         X = df.drop(columns=['exam_score'])
+        y = df['exam_score']
     else:
         X = df
+        y = None
 
     # Encode Categorical Data
     cat_cols = X.select_dtypes(include=['object']).columns
@@ -35,13 +37,20 @@ def get_dataloaders(filepath, batch_size=32):
         le = LabelEncoder()
         X[col] = le.fit_transform(X[col])
 
-    # Normalize (Critical for Neural Networks)
+    # Normalize
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Split
-    X_train, X_val = train_test_split(X_scaled, test_size=0.2, random_state=42)
+    return X_scaled, y, scaler
+
+def get_dataloaders(filepath, batch_size=32):
+    # Use the helper function above
+    X, y, scaler = load_and_process_data(filepath)
     
+    # Split
+    X_train, X_val = train_test_split(X, test_size=0.2, random_state=42)
+    
+    # Return Datasets (For Autoencoder we only use X)
     train_loader = DataLoader(StudentDataset(X_train), batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(StudentDataset(X_val), batch_size=batch_size, shuffle=False)
     
