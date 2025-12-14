@@ -1,4 +1,3 @@
-# src/train_predictor.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,34 +5,28 @@ from data_loader import get_dataloaders
 from model import StudentPredictor
 import os
 
-# CONFIG
+from src.utils import seed_everything
+seed_everything(42)
+
 DATA_PATH = "data/raw/student_habits_performance.csv"
-AE_PATH = "outputs/models/autoencoder.pth"  # Path to the model you just trained
+AE_PATH = "outputs/models/autoencoder.pth" 
 FINAL_MODEL_PATH = "outputs/models/final_predictor.pth"
 
 def train_predictor():
-    # 1. Get Data (Now we need 'y' / labels)
-    # We modify get_dataloaders slightly to return y if it wasn't already doing so effectively
-    # (Assuming your previous data_loader.py handles returning (X, y) in the loop)
-    
-    # Quick fix: Let's redefine a robust loader or ensure data_loader works
     from data_loader import load_and_process_data, StudentDataset
     from torch.utils.data import DataLoader
     from sklearn.model_selection import train_test_split
     
     X, y, scaler = load_and_process_data(DATA_PATH)
     
-    # Split
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Datasets with Targets
     train_dataset = StudentDatasetWithTargets(X_train, y_train)
     val_dataset = StudentDatasetWithTargets(X_val, y_val)
     
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     
-    # 2. Initialize Model with Transfer Learning
     model = StudentPredictor(input_dim=X.shape[1], pretrained_ae_path=AE_PATH)
     
     criterion = nn.MSELoss()
@@ -48,10 +41,8 @@ def train_predictor():
         for X_batch, y_batch in train_loader:
             optimizer.zero_grad()
             
-            # Ensure formats
             y_batch = y_batch.view(-1, 1).float()
             
-            # Forward
             preds = model(X_batch)
             loss = criterion(preds, y_batch)
             
@@ -63,7 +54,6 @@ def train_predictor():
             val_loss = evaluate(model, val_loader, criterion)
             print(f"Epoch {epoch+1}: Train Loss {total_loss/len(train_loader):.4f} | Val Loss {val_loss:.4f}")
 
-    # Save
     torch.save(model.state_dict(), FINAL_MODEL_PATH)
     print(f"Final Model saved to {FINAL_MODEL_PATH}")
 
@@ -78,7 +68,6 @@ def evaluate(model, loader, criterion):
             total_loss += loss.item()
     return total_loss / len(loader)
 
-# Helper Class for (X, y)
 from torch.utils.data import Dataset
 class StudentDatasetWithTargets(Dataset):
     def __init__(self, X, y):
