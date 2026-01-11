@@ -45,7 +45,6 @@ def train_rl():
         if (e+1) % 50 == 0:
             print(f"Episode {e+1}/{episodes} | Total Reward: {total_reward:.4f} | Epsilon: {agent.epsilon:.2f}")
 
-    # Save
     os.makedirs(os.path.dirname(DQN_PATH), exist_ok=True)
     torch.save(agent.dqn.state_dict(), DQN_PATH)
     print(f"DQN Agent saved in {DQN_PATH}")

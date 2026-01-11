@@ -5,7 +5,7 @@ from data_loader import get_dataloaders
 from model import StudentPredictor
 import os
 
-from src.utils import seed_everything
+from utils import seed_everything
 seed_everything(42)
 
 DATA_PATH = "data/raw/student_habits_performance.csv"
@@ -34,7 +34,9 @@ def train_predictor():
     
     print("Starting Supervised Training with Attention...")
     
-    for epoch in range(100):
+    best_val_loss = float('inf')
+
+    for epoch in range(500):
         model.train()
         total_loss = 0
         
@@ -50,12 +52,13 @@ def train_predictor():
             optimizer.step()
             total_loss += loss.item()
             
-        if (epoch+1) % 10 == 0:
-            val_loss = evaluate(model, val_loader, criterion)
-            print(f"Epoch {epoch+1}: Train Loss {total_loss/len(train_loader):.4f} | Val Loss {val_loss:.4f}")
+        val_loss = evaluate(model, val_loader, criterion)
+        print(f"Epoch {epoch+1}: Train Loss {total_loss:.4f} | Val Loss {val_loss:.4f}")
 
-    torch.save(model.state_dict(), FINAL_MODEL_PATH)
-    print(f"Final Model saved to {FINAL_MODEL_PATH}")
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        torch.save(model.state_dict(), FINAL_MODEL_PATH)
+        print(f"Final Model saved to {FINAL_MODEL_PATH}")
 
 def evaluate(model, loader, criterion):
     model.eval()
